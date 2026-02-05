@@ -15,12 +15,16 @@ readonly class CheckData
         public ?string $memo = null,
         public ?string $note = null,
         public ?string $nonce = null,
-        public ?string $templateId = null,
+        public ?string $template = null,
         public ?AddressData $fromAddress = null,
         public ?AddressData $toAddress = null,
         public ?array $attachments = null,
         public ?array $meta = null,
         public ?bool $test = null,
+        public ?string $specialInstructions = null,
+        public ?string $voucherImage = null,
+        public ?InvoiceTableData $invoiceTable = null,
+        public ?PaystubData $paystub = null,
     ) {
     }
 
@@ -51,8 +55,8 @@ readonly class CheckData
             $data['nonce'] = $this->nonce;
         }
 
-        if ($this->templateId !== null) {
-            $data['template_id'] = $this->templateId;
+        if ($this->template !== null) {
+            $data['template'] = $this->template;
         }
 
         if ($this->fromAddress !== null) {
@@ -75,6 +79,22 @@ readonly class CheckData
             $data['test'] = $this->test;
         }
 
+        if ($this->specialInstructions !== null) {
+            $data['special_instructions'] = $this->specialInstructions;
+        }
+
+        if ($this->voucherImage !== null) {
+            $data['voucher_image'] = $this->voucherImage;
+        }
+
+        if ($this->invoiceTable !== null) {
+            $data['invoice_table'] = $this->invoiceTable->toArray();
+        }
+
+        if ($this->paystub !== null) {
+            $data['paystub'] = $this->paystub->toArray();
+        }
+
         return $data;
     }
 
@@ -91,7 +111,7 @@ readonly class CheckData
             memo: $data['memo'] ?? null,
             note: $data['note'] ?? null,
             nonce: $data['nonce'] ?? null,
-            templateId: $data['template_id'] ?? null,
+            template: $data['template'] ?? null,
             fromAddress: isset($data['from_address'])
                 ? AddressData::fromArray($data['from_address'])
                 : null,
@@ -101,6 +121,14 @@ readonly class CheckData
             attachments: $data['attachments'] ?? null,
             meta: $data['meta'] ?? null,
             test: $data['test'] ?? null,
+            specialInstructions: $data['special_instructions'] ?? null,
+            voucherImage: $data['voucher_image'] ?? null,
+            invoiceTable: isset($data['invoice_table'])
+                ? InvoiceTableData::fromArray($data['invoice_table'])
+                : null,
+            paystub: isset($data['paystub'])
+                ? PaystubData::fromArray($data['paystub'])
+                : null,
         );
     }
 }

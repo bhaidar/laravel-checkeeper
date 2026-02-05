@@ -8,7 +8,8 @@ readonly class TrackingEventData
         public string $event,
         public ?string $subevent = null,
         public ?string $eventDate = null,
-        public ?object $location = null,
+        public ?string $eventDetails = null,
+        public ?EventLocationData $eventLocation = null,
     ) {
     }
 
@@ -18,7 +19,8 @@ readonly class TrackingEventData
             'event' => $this->event,
             'subevent' => $this->subevent,
             'event_date' => $this->eventDate,
-            'location' => $this->location,
+            'event_details' => $this->eventDetails,
+            'event_location' => $this->eventLocation?->toArray(),
         ], fn ($value) => $value !== null);
     }
 
@@ -28,7 +30,10 @@ readonly class TrackingEventData
             event: $data['event'],
             subevent: $data['subevent'] ?? null,
             eventDate: $data['event_date'] ?? null,
-            location: isset($data['location']) ? (object) $data['location'] : null,
+            eventDetails: $data['event_details'] ?? null,
+            eventLocation: isset($data['event_location'])
+                ? EventLocationData::fromArray($data['event_location'])
+                : null,
         );
     }
 }
