@@ -7,12 +7,12 @@ readonly class AddressData
     public function __construct(
         public string $name,
         public string $line1,
+        public string $city,
+        public string $state,
+        public string $zip,
         public ?string $company = null,
         public ?string $line2 = null,
         public ?string $line3 = null,
-        public ?string $city = null,
-        public ?string $state = null,
-        public ?string $zip = null,
         public ?string $country = null,
         public ?string $phone = null,
     ) {
@@ -39,12 +39,12 @@ readonly class AddressData
         return new self(
             name: $data['name'],
             line1: $data['line1'],
+            city: $data['city'],
+            state: $data['state'],
+            zip: $data['zip'],
             company: $data['company'] ?? null,
             line2: $data['line2'] ?? null,
             line3: $data['line3'] ?? null,
-            city: $data['city'] ?? null,
-            state: $data['state'] ?? null,
-            zip: $data['zip'] ?? null,
             country: $data['country'] ?? null,
             phone: $data['phone'] ?? null,
         );
