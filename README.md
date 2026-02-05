@@ -98,12 +98,6 @@ return [
     // HTTP timeout (seconds)
     'timeout' => 30,
 
-    // Retry configuration
-    'retry' => [
-        'times' => 3,
-        'sleep' => 100, // milliseconds
-    ],
-
     // Webhook configuration
     'webhooks' => [
         'enabled' => true,
@@ -129,15 +123,15 @@ The Laravel Checkeeper package provides a clean, Laravel-friendly interface to t
 
 ```
 Your Application
-    ↓
+    |
 Checkeeper Facade
-    ↓
+    |
 CheckkeeperClient (HTTP Client)
-    ↓
+    |
 Resources (Check, Team, Template)
-    ↓
+    |
 Checkeeper API
-    ↓
+    |
 Check Mailing Service
 ```
 
@@ -156,15 +150,18 @@ Check Mailing Service
 // 1. Create check data (DTO or array)
 $checkData = new CheckData(...);
 
-// 2. Send to Checkeeper via Facade
-$result = Checkeeper::checks()->create($checkData);
+// 2. Optionally specify delivery method
+$delivery = new DeliveryData(method: DeliveryMethod::UspsFirstClass);
 
-// 3. Package handles HTTP request with retry logic
-// 4. Returns typed CheckStatusData response
+// 3. Send to Checkeeper via Facade
+$result = Checkeeper::checks()->create($checkData, $delivery);
+
+// 4. Package handles HTTP request with retry logic
+// 5. Returns typed CheckStatusData response
 echo $result->id; // "check-abc123"
 
-// 5. Webhooks notify you of status changes
-// 6. Events fired for your listeners
+// 6. Webhooks notify you of status changes
+// 7. Events fired for your listeners
 ```
 
 ## Creating Checks
@@ -178,8 +175,8 @@ use Bhaidar\Checkeeper\Facades\Checkeeper;
 
 $result = Checkeeper::checks()->create([
     'bank' => [
-        'routing' => '123456789',    // 9-digit routing number
-        'account' => '987654321',    // Account number
+        'routing' => '123456789',
+        'account' => '987654321',
     ],
     'payer' => [
         'line1' => 'My Company Inc',
@@ -193,14 +190,14 @@ $result = Checkeeper::checks()->create([
         'line3' => 'Los Angeles, CA 90210',
     ],
     'signer' => [
-        'type' => 'text',           // or 'png', 'jpg', 'gif'
-        'value' => 'Jane Smith',    // Name or base64 image
+        'type' => 'text',
+        'value' => 'Jane Smith',
     ],
     'amount' => 50000,              // $500.00 (amount in cents)
-    'number' => 1001,               // Check number
-    'date' => '2024-02-29',         // Optional, defaults to today
-    'memo' => 'Invoice #12345',     // Optional
-    'nonce' => 'unique-id-12345',   // Optional, prevents duplicates
+    'number' => 1001,
+    'date' => '2024-02-29',
+    'memo' => 'Invoice #12345',
+    'nonce' => 'unique-id-12345',   // prevents duplicates
 ]);
 
 // Result contains check ID and status
@@ -274,22 +271,33 @@ $signer = new SignerData(
 
 ### Delivery Methods
 
-Control how checks are delivered:
+Delivery is specified **separately** from check data and passed as the second argument to `create()` or `createBulk()`. This matches the Checkeeper API payload structure where `delivery` is a sibling to `checks`:
+
+```json
+{
+    "checks": [{ ... }],
+    "delivery": { "method": "first_class" }
+}
+```
 
 ```php
 use Bhaidar\Checkeeper\DataTransferObjects\DeliveryData;
 use Bhaidar\Checkeeper\DataTransferObjects\AddressData;
 use Bhaidar\Checkeeper\Enums\DeliveryMethod;
 
-// First class mail (individual checks to each payee)
+// First class mail
 $delivery = new DeliveryData(
     method: DeliveryMethod::UspsFirstClass
 );
+
+$result = Checkeeper::checks()->create($checkData, $delivery);
 
 // Priority mail
 $delivery = new DeliveryData(
     method: DeliveryMethod::UspsPriority
 );
+
+$result = Checkeeper::checks()->create($checkData, $delivery);
 
 // Overnight shipping (bundled to one address)
 $delivery = new DeliveryData(
@@ -305,16 +313,20 @@ $delivery = new DeliveryData(
     )
 );
 
+$result = Checkeeper::checks()->create($checkData, $delivery);
+
 // PDF return (no mailing, get PDF to print yourself)
 $delivery = new DeliveryData(
     method: DeliveryMethod::Pdf
 );
 
-// Use in CheckData
-$checkData = new CheckData(
-    // ... other fields
-    delivery: $delivery
-);
+$result = Checkeeper::checks()->create($checkData, $delivery);
+```
+
+**No delivery specified** defaults to the team's configured delivery method:
+
+```php
+$result = Checkeeper::checks()->create($checkData);
 ```
 
 **Available Delivery Methods:**
@@ -331,7 +343,7 @@ $checkData = new CheckData(
 
 ### Bulk Check Creation
 
-Create multiple checks in a single API request (up to 100 checks):
+Create multiple checks in a single API request. Delivery applies to **all** checks in the batch:
 
 ```php
 $checks = [
@@ -355,7 +367,12 @@ $checks = [
     ],
 ];
 
+// Without delivery (uses team default)
 $result = Checkeeper::checks()->createBulk($checks);
+
+// With delivery
+$delivery = new DeliveryData(method: DeliveryMethod::UspsPriority);
+$result = Checkeeper::checks()->createBulk($checks, $delivery);
 
 // Result contains:
 echo "Created: " . count($result['checks']); // New checks
@@ -372,7 +389,8 @@ $checksData = [
     new CheckData(/* ... */),
 ];
 
-$result = Checkeeper::checks()->createBulk($checksData);
+$delivery = new DeliveryData(method: DeliveryMethod::UspsFirstClass);
+$result = Checkeeper::checks()->createBulk($checksData, $delivery);
 ```
 
 ### Async Check Creation
@@ -418,7 +436,7 @@ protected $listen = [
 $checks = Checkeeper::checks()->list();
 
 foreach ($checks as $check) {
-    echo "{$check->id}: {$check->payee->line1} - \${$check->amount / 100}\n";
+    echo "{$check->id}: {$check->status->value}\n";
 }
 ```
 
@@ -429,7 +447,6 @@ Use the fluent filter builder for powerful queries:
 ```php
 use Bhaidar\Checkeeper\Enums\CheckStatus;
 
-// Fluent filter builder
 $checks = Checkeeper::checks()
     ->filter()
     ->whereEquals('status', CheckStatus::Delivered->value)
@@ -528,16 +545,6 @@ foreach ($events as $event) {
 }
 ```
 
-**Example output:**
-```
-PRE_TRANSIT: 2024-02-29 10:00:00
-  Location: New York, NY
-TRANSIT: 2024-03-01 08:00:00
-  Location: Philadelphia, PA
-DELIVERY: 2024-03-02 14:30:00
-  Location: Boston, MA
-```
-
 ### Cancel Check
 
 Cancel a check before it's printed or mailed:
@@ -559,13 +566,13 @@ Download check images as JPG or PDF:
 ```php
 use Illuminate\Support\Facades\Storage;
 
-// Get JPG image (base64 encoded)
+// Get JPG image
 $imageData = Checkeeper::checks()->image('check-abc123', 'jpg');
-Storage::put('checks/check-abc123.jpg', base64_decode($imageData));
+Storage::put('checks/check-abc123.jpg', $imageData);
 
 // Get PDF
 $pdfData = Checkeeper::checks()->image('check-abc123', 'pdf');
-Storage::put('checks/check-abc123.pdf', base64_decode($pdfData));
+Storage::put('checks/check-abc123.pdf', $pdfData);
 
 // Download in controller
 public function download($checkId)
@@ -573,7 +580,7 @@ public function download($checkId)
     $pdfData = Checkeeper::checks()->image($checkId, 'pdf');
 
     return response()->streamDownload(function () use ($pdfData) {
-        echo base64_decode($pdfData);
+        echo $pdfData;
     }, "check-{$checkId}.pdf");
 }
 ```
@@ -582,7 +589,7 @@ public function download($checkId)
 
 ```php
 $voucherData = Checkeeper::checks()->voucherImage('check-abc123');
-Storage::put('vouchers/voucher-abc123.jpg', base64_decode($voucherData));
+Storage::put('vouchers/voucher-abc123.jpg', $voucherData);
 ```
 
 ## Webhooks
@@ -609,8 +616,6 @@ The package automatically:
 Register listeners in your `EventServiceProvider`:
 
 ```php
-// app/Providers/EventServiceProvider.php
-
 use Bhaidar\Checkeeper\Events\WebhookReceived;
 use Bhaidar\Checkeeper\Events\CheckCreated;
 use Bhaidar\Checkeeper\Events\CheckCancelled;
@@ -638,8 +643,6 @@ protected $listen = [
 #### Update Invoice When Check Delivered
 
 ```php
-// app/Listeners/MarkInvoiceAsPaid.php
-
 namespace App\Listeners;
 
 use Bhaidar\Checkeeper\Events\WebhookReceived;
@@ -651,26 +654,22 @@ class MarkInvoiceAsPaid
     {
         $payload = $event->payload;
 
-        // Check if this is a delivery event
         if ($payload['event'] !== 'check.delivered') {
             return;
         }
 
-        $checkId = $payload['check_id'];
-        $deliveredAt = $payload['delivered_at'];
+        $invoice = Invoice::where('check_id', $payload['check_id'])->first();
 
-        // Find invoice by check ID
-        $invoice = Invoice::where('check_id', $checkId)->first();
-
-        if ($invoice) {
-            $invoice->update([
-                'status' => 'paid',
-                'paid_at' => $deliveredAt,
-            ]);
-
-            // Send notification
-            $invoice->customer->notify(new CheckDeliveredNotification($invoice));
+        if (! $invoice) {
+            return;
         }
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $payload['delivered_at'],
+        ]);
+
+        $invoice->customer->notify(new CheckDeliveredNotification($invoice));
     }
 }
 ```
@@ -678,8 +677,6 @@ class MarkInvoiceAsPaid
 #### Log All Webhook Activity
 
 ```php
-// app/Listeners/LogWebhookActivity.php
-
 namespace App\Listeners;
 
 use Bhaidar\Checkeeper\Events\WebhookReceived;
@@ -693,35 +690,6 @@ class LogWebhookActivity
             'event' => $event->payload['event'] ?? 'unknown',
             'check_id' => $event->payload['check_id'] ?? null,
             'received_at' => $event->receivedAt,
-        ]);
-    }
-}
-```
-
-#### Real-time Status Dashboard
-
-```php
-// app/Http/Controllers/PaymentStatusController.php
-
-namespace App\Http\Controllers;
-
-use App\Models\Payment;
-use Bhaidar\Checkeeper\Facades\Checkeeper;
-
-class PaymentStatusController extends Controller
-{
-    public function show(Payment $payment)
-    {
-        // Get real-time status from Checkeeper
-        $checkStatus = Checkeeper::checks()->status($payment->check_id);
-
-        // Get tracking events
-        $tracking = Checkeeper::checks()->tracking($payment->check_id);
-
-        return view('payments.status', [
-            'payment' => $payment,
-            'status' => $checkStatus,
-            'tracking' => $tracking,
         ]);
     }
 }
@@ -742,7 +710,7 @@ The package automatically verifies webhook signatures using the `VerifyWebhookSi
 ```php
 // config/checkeeper.php
 'webhooks' => [
-    'enabled' => false, // Disable webhook handling
+    'enabled' => false,
 ],
 ```
 
@@ -753,8 +721,8 @@ The package automatically verifies webhook signatures using the `VerifyWebhookSi
 ```php
 $info = Checkeeper::team()->info();
 
-echo $info['name'];     // "Your Team Name"
-echo $info['credits'];  // 100
+echo $info['name'];
+echo $info['credits'];
 ```
 
 ### List Available Templates
@@ -791,17 +759,13 @@ class SendCheckCreatedEmail
 {
     public function handle(CheckCreated $event): void
     {
-        $check = $event->check;
-        $metadata = $event->metadata;
+        $check = $event->check;       // CheckStatusData
+        $metadata = $event->metadata;  // array
 
         Mail::to($recipient)->send(new CheckCreatedMail($check));
     }
 }
 ```
-
-**Properties:**
-- `CheckStatusData $check` - The created check
-- `array $metadata` - Additional metadata
 
 ### CheckCancelled
 
@@ -816,14 +780,10 @@ class RefundCancelledCheck
     {
         $checkId = $event->checkId;
 
-        // Process refund
         Refund::create(['check_id' => $checkId]);
     }
 }
 ```
-
-**Properties:**
-- `string $checkId` - The cancelled check ID
 
 ### WebhookReceived
 
@@ -836,11 +796,10 @@ class ProcessWebhookPayload
 {
     public function handle(WebhookReceived $event): void
     {
-        $payload = $event->payload;
-        $signature = $event->signature;
-        $receivedAt = $event->receivedAt;
+        $payload = $event->payload;       // array
+        $signature = $event->signature;   // string
+        $receivedAt = $event->receivedAt; // string (ISO 8601)
 
-        // Process webhook
         match ($payload['event']) {
             'check.printed' => $this->handlePrinted($payload),
             'check.mailed' => $this->handleMailed($payload),
@@ -850,11 +809,6 @@ class ProcessWebhookPayload
     }
 }
 ```
-
-**Properties:**
-- `array $payload` - The webhook payload
-- `string $signature` - The webhook signature
-- `string $receivedAt` - ISO 8601 timestamp
 
 ## Exception Handling
 
@@ -890,17 +844,23 @@ try {
 }
 ```
 
-**Exception Properties:**
-
-- `$statusCode` - HTTP status code
-- `$errors` - Array of validation errors (422 only)
-- `getMessage()` - Error message from API
-
 ## Complete Application Example
 
 Here's a complete example of a vendor payment system:
 
 ```php
+use Bhaidar\Checkeeper\Facades\Checkeeper;
+use Bhaidar\Checkeeper\DataTransferObjects\CheckData;
+use Bhaidar\Checkeeper\DataTransferObjects\BankData;
+use Bhaidar\Checkeeper\DataTransferObjects\PayerData;
+use Bhaidar\Checkeeper\DataTransferObjects\PayeeData;
+use Bhaidar\Checkeeper\DataTransferObjects\SignerData;
+use Bhaidar\Checkeeper\DataTransferObjects\DeliveryData;
+use Bhaidar\Checkeeper\Enums\SignerType;
+use Bhaidar\Checkeeper\Enums\DeliveryMethod;
+use Bhaidar\Checkeeper\Events\WebhookReceived;
+use Bhaidar\Checkeeper\Jobs\CreateCheckJob;
+
 // Step 1: Create payment record
 $payment = Payment::create([
     'invoice_id' => $invoice->id,
@@ -934,14 +894,17 @@ $checkData = new CheckData(
     nonce: "payment-{$payment->id}"
 );
 
-// Step 3: Queue check creation
-CreateCheckJob::dispatch($checkData)
-    ->onSuccess(function ($result) use ($payment) {
-        $payment->update([
-            'check_id' => $result->id,
-            'status' => 'sent_to_printer',
-        ]);
-    });
+// Step 3: Create check with delivery method
+$delivery = new DeliveryData(method: DeliveryMethod::UspsFirstClass);
+$result = Checkeeper::checks()->create($checkData, $delivery);
+
+$payment->update([
+    'check_id' => $result->id,
+    'status' => 'sent_to_printer',
+]);
+
+// Or queue it for async processing
+CreateCheckJob::dispatch($checkData);
 
 // Step 4: Listen for webhook events
 // app/Listeners/UpdatePaymentStatus.php
@@ -954,7 +917,7 @@ class UpdatePaymentStatus
 
         $payment = Payment::where('check_id', $checkId)->first();
 
-        if (!$payment) {
+        if (! $payment) {
             return;
         }
 
@@ -969,13 +932,15 @@ class UpdatePaymentStatus
             default => null,
         };
 
-        // Notify vendor
         $payment->vendor->notify(new CheckStatusUpdated($payment));
     }
 }
 
 // Step 5: Display status to user
 // resources/views/payments/show.blade.php
+```
+
+```blade
 <div class="payment-status">
     <h3>Payment #{{ $payment->id }}</h3>
 
@@ -1007,8 +972,6 @@ class UpdatePaymentStatus
 Use HTTP fakes to test your Checkeeper integration:
 
 ```php
-// tests/Feature/VendorPaymentTest.php
-
 use Bhaidar\Checkeeper\Facades\Checkeeper;
 use Illuminate\Support\Facades\Http;
 
@@ -1064,25 +1027,25 @@ test('updates payment status on webhook', function () {
 ### Check Operations
 
 ```php
-// List checks
-Checkeeper::checks()->list(array $filters = []): Collection<CheckStatusData>
+// List checks (returns Collection of CheckStatusData)
+Checkeeper::checks()->list(array $filters = []): Collection
 
-// Create single check
-Checkeeper::checks()->create(CheckData|array $data): CheckStatusData
+// Create single check (delivery is separate from check data)
+Checkeeper::checks()->create(CheckData|array $data, ?DeliveryData $delivery = null): CheckStatusData
 
-// Create multiple checks
-Checkeeper::checks()->createBulk(array $checks): array
+// Create multiple checks (delivery applies to all checks)
+Checkeeper::checks()->createBulk(array $checks, ?DeliveryData $delivery = null): array
 
 // Get check status
 Checkeeper::checks()->status(string $id): CheckStatusData
 
 // Get tracking events
-Checkeeper::checks()->tracking(string $id): Collection<TrackingEventData>
+Checkeeper::checks()->tracking(string $id): Collection
 
 // Cancel check
 Checkeeper::checks()->cancel(string $id): bool
 
-// Get check image
+// Get check image (jpg or pdf)
 Checkeeper::checks()->image(string $id, string $type = 'jpg'): string
 
 // Add attachment
@@ -1109,21 +1072,25 @@ Checkeeper::templates()->list(): Collection
 
 ### Available DTOs
 
-- `CheckData` - Main check payload
-- `BankData` - Bank account information
-- `PayerData` - Payer information (company sending check)
-- `PayeeData` - Payee information (recipient)
-- `SignerData` - Signature information
-- `AddressData` - Address information
-- `DeliveryData` - Delivery method and bundling
-- `CheckStatusData` - Check status response
-- `TrackingEventData` - Tracking event
+| DTO | Description |
+|-----|-------------|
+| `CheckData` | Check payload (bank, payer, payee, signer, amount, etc.) |
+| `BankData` | Bank routing and account numbers |
+| `PayerData` | Payer/company info (lines 1-4, logo) |
+| `PayeeData` | Payee/recipient info (lines 1-4) |
+| `SignerData` | Signature (text name or image) |
+| `AddressData` | Full address (name, lines, city, state, zip, country, phone) |
+| `DeliveryData` | Delivery method and optional bundle address |
+| `CheckStatusData` | API response (id, status, created, updated, trackingUrl) |
+| `TrackingEventData` | Tracking event (event, subevent, eventDate, location) |
 
 ### Available Enums
 
-- `DeliveryMethod` - Shipping methods
-- `CheckStatus` - Check statuses
-- `SignerType` - Signature types
+| Enum | Values |
+|------|--------|
+| `DeliveryMethod` | `UspsFirstClass`, `UspsPriority`, `UpsTwoDay`, `UpsNextDay`, `FedexTwoDay`, `FedexOvernight`, `Pdf` |
+| `CheckStatus` | `Processing`, `Ready`, `Printed`, `Mailed`, `Delivered`, `Cancelled`, `Returned` |
+| `SignerType` | `Text`, `Png`, `Gif`, `Jpg` |
 
 ## Testing
 
