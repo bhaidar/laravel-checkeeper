@@ -5,6 +5,7 @@ namespace Bhaidar\Checkeeper\Resources;
 use Bhaidar\Checkeeper\Client\PendingRequest;
 use Bhaidar\Checkeeper\DataTransferObjects\CheckData;
 use Bhaidar\Checkeeper\DataTransferObjects\CheckStatusData;
+use Bhaidar\Checkeeper\DataTransferObjects\DeliveryData;
 use Bhaidar\Checkeeper\DataTransferObjects\TrackingEventData;
 use Bhaidar\Checkeeper\Support\CheckFilterBuilder;
 use Illuminate\Support\Collection;
@@ -24,25 +25,37 @@ class CheckResource
             ->map(fn (array $check) => CheckStatusData::fromArray($check));
     }
 
-    public function create(CheckData|array $data): CheckStatusData
+    public function create(CheckData|array $data, ?DeliveryData $delivery = null): CheckStatusData
     {
-        $payload = $data instanceof CheckData ? $data->toArray() : $data;
+        $checkPayload = $data instanceof CheckData ? $data->toArray() : $data;
 
-        $response = $this->request->post('/check', ['checks' => [$payload]]);
+        $payload = ['checks' => [$checkPayload]];
+
+        if ($delivery !== null) {
+            $payload['delivery'] = $delivery->toArray();
+        }
+
+        $response = $this->request->post('/check', $payload);
 
         $checks = $response->json('data.checks', []);
 
         return CheckStatusData::fromArray($checks[0]);
     }
 
-    public function createBulk(array $checks): array
+    public function createBulk(array $checks, ?DeliveryData $delivery = null): array
     {
-        $payload = array_map(
+        $checksPayload = array_map(
             fn ($check) => $check instanceof CheckData ? $check->toArray() : $check,
             $checks
         );
 
-        $response = $this->request->post('/check', ['checks' => $payload]);
+        $payload = ['checks' => $checksPayload];
+
+        if ($delivery !== null) {
+            $payload['delivery'] = $delivery->toArray();
+        }
+
+        $response = $this->request->post('/check', $payload);
 
         return [
             'checks' => collect($response->json('data.checks', []))

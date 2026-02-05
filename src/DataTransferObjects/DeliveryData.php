@@ -9,6 +9,7 @@ readonly class DeliveryData
     public function __construct(
         public DeliveryMethod $method,
         public ?AddressData $bundleAddress = null,
+        public ?AddressData $bundleReturn = null,
     ) {
     }
 
@@ -22,6 +23,10 @@ readonly class DeliveryData
             $data['bundle_address'] = $this->bundleAddress->toArray();
         }
 
+        if ($this->bundleReturn !== null) {
+            $data['bundle_return'] = $this->bundleReturn->toArray();
+        }
+
         return $data;
     }
 
@@ -31,6 +36,9 @@ readonly class DeliveryData
             method: DeliveryMethod::from($data['method']),
             bundleAddress: isset($data['bundle_address'])
                 ? AddressData::fromArray($data['bundle_address'])
+                : null,
+            bundleReturn: isset($data['bundle_return'])
+                ? AddressData::fromArray($data['bundle_return'])
                 : null,
         );
     }

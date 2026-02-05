@@ -16,7 +16,6 @@ readonly class CheckData
         public ?string $note = null,
         public ?string $nonce = null,
         public ?string $templateId = null,
-        public ?DeliveryData $delivery = null,
         public ?AddressData $fromAddress = null,
         public ?AddressData $toAddress = null,
         public ?array $attachments = null,
@@ -56,10 +55,6 @@ readonly class CheckData
             $data['template_id'] = $this->templateId;
         }
 
-        if ($this->delivery !== null) {
-            $data['delivery'] = $this->delivery->toArray();
-        }
-
         if ($this->fromAddress !== null) {
             $data['from_address'] = $this->fromAddress->toArray();
         }
@@ -97,9 +92,6 @@ readonly class CheckData
             note: $data['note'] ?? null,
             nonce: $data['nonce'] ?? null,
             templateId: $data['template_id'] ?? null,
-            delivery: isset($data['delivery'])
-                ? DeliveryData::fromArray($data['delivery'])
-                : null,
             fromAddress: isset($data['from_address'])
                 ? AddressData::fromArray($data['from_address'])
                 : null,

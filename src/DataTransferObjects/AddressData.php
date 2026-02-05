@@ -7,7 +7,9 @@ readonly class AddressData
     public function __construct(
         public string $name,
         public string $line1,
+        public ?string $company = null,
         public ?string $line2 = null,
+        public ?string $line3 = null,
         public ?string $city = null,
         public ?string $state = null,
         public ?string $zip = null,
@@ -20,8 +22,10 @@ readonly class AddressData
     {
         return array_filter([
             'name' => $this->name,
+            'company' => $this->company,
             'line1' => $this->line1,
             'line2' => $this->line2,
+            'line3' => $this->line3,
             'city' => $this->city,
             'state' => $this->state,
             'zip' => $this->zip,
@@ -35,7 +39,9 @@ readonly class AddressData
         return new self(
             name: $data['name'],
             line1: $data['line1'],
+            company: $data['company'] ?? null,
             line2: $data['line2'] ?? null,
+            line3: $data['line3'] ?? null,
             city: $data['city'] ?? null,
             state: $data['state'] ?? null,
             zip: $data['zip'] ?? null,
