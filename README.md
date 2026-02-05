@@ -276,7 +276,7 @@ Delivery is specified **separately** from check data and passed as the second ar
 ```json
 {
     "checks": [{ ... }],
-    "delivery": { "method": "first_class" }
+    "delivery": { "method": "usps.first_class" }
 }
 ```
 
@@ -333,12 +333,12 @@ $result = Checkeeper::checks()->create($checkData);
 
 | Enum | Value | Description |
 |------|-------|-------------|
-| `DeliveryMethod::UspsFirstClass` | `first_class` | USPS First Class Mail |
-| `DeliveryMethod::UspsPriority` | `priority` | USPS Priority Mail |
-| `DeliveryMethod::UpsTwoDay` | `two_day` | UPS 2-Day Shipping |
-| `DeliveryMethod::UpsNextDay` | `next_day` | UPS Next Day Air |
-| `DeliveryMethod::FedexTwoDay` | `fedex_two_day` | FedEx 2-Day |
-| `DeliveryMethod::FedexOvernight` | `fedex_overnight` | FedEx Overnight |
+| `DeliveryMethod::UspsFirstClass` | `usps.first_class` | USPS First Class Mail |
+| `DeliveryMethod::UspsPriority` | `usps.priority` | USPS Priority Mail |
+| `DeliveryMethod::UpsTwoDay` | `ups.two_day` | UPS 2-Day Shipping |
+| `DeliveryMethod::UpsNextDay` | `ups.next_day` | UPS Next Day Air |
+| `DeliveryMethod::FedexTwoDay` | `fedex.two_day` | FedEx 2-Day |
+| `DeliveryMethod::FedexOvernight` | `fedex.overnight` | FedEx Overnight |
 | `DeliveryMethod::Pdf` | `pdf` | Return PDF only |
 
 ### Bulk Check Creation
