@@ -11,7 +11,7 @@ A comprehensive Laravel package for the Checkeeper API v3. Send physical checks 
 - **Type-Safe** - Readonly DTOs with typed properties throughout
 - **Fluent Queries** - Powerful filter builder for searching checks
 - **Webhook Support** - Automatic signature verification and event dispatching
-- **Queue Integration** - Async check creation and webhook processing
+- **Queue Integration** - Async check creation
 - **Event-Driven** - Laravel events for check operations
 - **Well Tested** - Comprehensive Pest test suite
 - **Laravel 11+** - Built for modern Laravel applications
@@ -608,7 +608,6 @@ Webhooks allow Checkeeper to notify your application in real-time when check sta
 The package automatically:
 - Verifies webhook signatures using HMAC SHA256
 - Dispatches `WebhookReceived` event
-- Queues webhook processing (if enabled)
 - Returns 200 OK immediately
 
 ### Listening to Events

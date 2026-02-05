@@ -1,9 +1,7 @@
 <?php
 
 use Bhaidar\Checkeeper\Events\WebhookReceived;
-use Bhaidar\Checkeeper\Jobs\ProcessWebhookJob;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Queue;
 
 test('webhook endpoint validates signature', function () {
     $payload = json_encode(['event' => 'check.delivered', 'check_id' => 'check-123']);
@@ -39,18 +37,4 @@ test('webhook dispatches event', function () {
     ]);
 
     Event::assertDispatched(WebhookReceived::class);
-});
-
-test('webhook queues processing job', function () {
-    Queue::fake();
-
-    $payload = json_encode(['event' => 'check.delivered', 'check_id' => 'check-123']);
-    $secret = config('checkeeper.webhooks.secret');
-    $signature = hash_hmac('sha256', $payload, $secret);
-
-    $this->postJson('/checkeeper/webhook', json_decode($payload, true), [
-        'X-Checkeeper-Signature' => $signature,
-    ]);
-
-    Queue::assertPushed(ProcessWebhookJob::class);
 });
