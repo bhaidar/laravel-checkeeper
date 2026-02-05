@@ -15,7 +15,7 @@ readonly class DeliveryData
     public function toArray(): array
     {
         $data = [
-            'ship_method' => $this->method->value,
+            'method' => $this->method->value,
         ];
 
         if ($this->bundleAddress !== null) {
@@ -28,7 +28,7 @@ readonly class DeliveryData
     public static function fromArray(array $data): self
     {
         return new self(
-            method: DeliveryMethod::from($data['ship_method']),
+            method: DeliveryMethod::from($data['method']),
             bundleAddress: isset($data['bundle_address'])
                 ? AddressData::fromArray($data['bundle_address'])
                 : null,

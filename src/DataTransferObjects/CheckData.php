@@ -57,7 +57,7 @@ readonly class CheckData
         }
 
         if ($this->delivery !== null) {
-            $data = array_merge($data, $this->delivery->toArray());
+            $data['delivery'] = $this->delivery->toArray();
         }
 
         if ($this->fromAddress !== null) {
@@ -97,8 +97,8 @@ readonly class CheckData
             note: $data['note'] ?? null,
             nonce: $data['nonce'] ?? null,
             templateId: $data['template_id'] ?? null,
-            delivery: isset($data['ship_method'])
-                ? DeliveryData::fromArray($data)
+            delivery: isset($data['delivery'])
+                ? DeliveryData::fromArray($data['delivery'])
                 : null,
             fromAddress: isset($data['from_address'])
                 ? AddressData::fromArray($data['from_address'])
