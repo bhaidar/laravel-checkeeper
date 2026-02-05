@@ -10,6 +10,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VerifyWebhookSignature
 {
+    /**
+     * @throws AuthenticationException
+     */
     public function handle(Request $request, Closure $next): Response
     {
         if (! config('checkeeper.webhooks.enabled')) {

@@ -3,6 +3,7 @@
 namespace Bhaidar\Checkeeper\Support;
 
 use Bhaidar\Checkeeper\Client\PendingRequest;
+use Bhaidar\Checkeeper\DataTransferObjects\CheckStatusData;
 use Illuminate\Support\Collection;
 
 class CheckFilterBuilder
@@ -104,7 +105,8 @@ class CheckFilterBuilder
 
         $response = $this->request->get('/checks', $params);
 
-        return collect($response->json('data', []));
+        return collect($response->json('data', []))
+            ->map(fn (array $check) => CheckStatusData::fromArray($check));
     }
 
     public function toArray(): array

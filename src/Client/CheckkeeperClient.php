@@ -5,7 +5,6 @@ namespace Bhaidar\Checkeeper\Client;
 use Bhaidar\Checkeeper\Resources\CheckResource;
 use Bhaidar\Checkeeper\Resources\TeamResource;
 use Bhaidar\Checkeeper\Resources\TemplateResource;
-use Illuminate\Http\Client\PendingRequest as LaravelPendingRequest;
 use Illuminate\Support\Facades\Http;
 
 class CheckkeeperClient
@@ -26,10 +25,6 @@ class CheckkeeperClient
         $laravelRequest = Http::baseUrl($this->baseUrl)
             ->withToken($this->apiKey)
             ->timeout($this->timeout)
-            ->retry(
-                times: $this->retry['times'],
-                sleep: $this->retry['sleep']
-            )
             ->acceptJson();
 
         return new PendingRequest($laravelRequest);

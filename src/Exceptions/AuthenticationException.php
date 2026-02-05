@@ -2,6 +2,16 @@
 
 namespace Bhaidar\Checkeeper\Exceptions;
 
-class AuthenticationException extends CheckkeeperException
+use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Http\JsonResponse;
+
+class AuthenticationException extends CheckkeeperException implements Responsable
 {
+    public function toResponse($request): JsonResponse
+    {
+        return new JsonResponse(
+            ['message' => $this->getMessage()],
+            $this->statusCode ?: 401
+        );
+    }
 }
