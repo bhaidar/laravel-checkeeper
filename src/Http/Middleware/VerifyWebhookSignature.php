@@ -19,7 +19,7 @@ class VerifyWebhookSignature
             return $next($request);
         }
 
-        $signature = $request->header('X-Checkeeper-Signature');
+        $signature = $request->header('signature');
 
         if (! $signature) {
             throw new AuthenticationException('Missing webhook signature', 401);
